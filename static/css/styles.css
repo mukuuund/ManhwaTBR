@@ -1,0 +1,87 @@
+:root {
+    /* Neon Ink Light Theme (Main Content) */
+    --color-bg-main: #fcfcfc; /* off-white background */
+    --color-bg-card: #ffffff; /* pure white cards */
+    --color-bg-card-hover: #fafafa;
+    
+    --color-border-light: #e5e7eb;
+    --color-border-heavy: #e4e4e7; /* subtle borders */
+    
+    --color-text-main: #18181b; /* near black text */
+    --color-text-muted: #71717a; /* gray */
+    
+    --color-neon-accent: #c3f400; /* vibrant lime green */
+    --color-on-neon: #000000;
+    
+    --color-secondary: #0ea5e9; /* blue accent */
+    --color-on-secondary: #ffffff;
+    
+    /* Sidebar / Dark Mode parts */
+    --color-bg-sidebar: #09090b; /* black sidebar */
+    --color-text-inverse: #ffffff;
+    
+    --color-badge-success: #10b981;
+    --color-badge-warning: #f59e0b;
+    --color-badge-danger: #ef4444;
+}
+
+body {
+    background-color: var(--color-bg-main);
+    color: var(--color-text-main);
+}
+
+.bg-primary-container, .bg-neon {
+    color: #000000 !important;
+}
+.bg-primary-container *, .bg-neon * {
+    color: #000000 !important;
+}
+
+/* Card Styles */
+.manga-panel {
+    border: 1px solid var(--color-border-heavy);
+    background-color: var(--color-bg-card);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.manga-panel:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+}
+
+.manga-cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Clean UI utility classes */
+.clean-border {
+    border: 1px solid var(--color-border-heavy);
+    border-radius: 4px;
+}
+
+/* Glass surfaces for sticky elements */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+    background: #d4d4d8; 
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1aa; 
+}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-surface-container-lowest p-8 md:p-12 rounded-xl shadow-sm border border-gray-200 mt-8 mb-12">
+    <div class="mb-8 border-b border-gray-100 pb-6">
+        <h1 class="text-3xl font-black text-gray-900 uppercase tracking-tighter">Privacy</h1>
+    </div>
+    
+    <div class="space-y-6 text-gray-600 font-body-md leading-relaxed">
+        <ul class="list-disc pl-5 space-y-3">
+            <li>The app stores basic account information such as username/email and password hash.</li>
+            <li>Raw passwords are not stored.</li>
+            <li>The app stores the user's tracked manhwa, progress, preferences, recommendation feedback, and learned recommendation weights.</li>
+            <li>The app may call external services like AniList and MangaDex to fetch manhwa metadata, chapter info, and cover images.</li>
+            <li>The app does not intentionally sell or share user data.</li>
+            <li>Since this is a personal/demo project, users should avoid entering sensitive personal information.</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

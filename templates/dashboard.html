@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col gap-10">
+
+    <!-- KPI Section -->
+    <section>
+        <div class="mb-4">
+            <span class="text-xs font-mono text-gray-400 tracking-widest uppercase">Status Report</span>
+            <h2 class="text-3xl font-black text-[#85a600] uppercase tracking-tighter">System Active</h2>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Tracked Stats -->
+            <div class="manga-panel p-6 flex flex-col justify-center border-t-4 border-t-primary-container">
+                <div class="flex justify-around items-end">
+                    <div class="text-center">
+                        <div class="text-4xl font-light text-on-surface">{{ stats.total_tracked }}</div>
+                        <div class="text-[10px] font-mono text-gray-400 uppercase tracking-widest mt-2">Tracked</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-light text-[#0ea5e9]">{{ stats.active_reading }}</div>
+                        <div class="text-[10px] font-mono text-gray-400 uppercase tracking-widest mt-2">In Progress</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Updates Available -->
+            <div class="manga-panel p-6 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-[#0ea5e9] text-3xl mb-2">verified</span>
+                <div class="text-3xl font-bold text-on-surface">{{ stats.updates_available }}</div>
+                <div class="text-xs font-mono text-gray-500 uppercase tracking-widest mt-1">Updates Available</div>
+            </div>
+            
+            <!-- Completion Rate -->
+            <div class="manga-panel p-6 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-primary-container text-3xl mb-2">trending_up</span>
+                <div class="text-3xl font-bold text-on-surface">{% if stats.completion_rate == "N/A" %}N/A{% else %}{{ stats.completion_rate }}%{% endif %}</div>
+                <div class="text-xs font-mono text-gray-500 uppercase tracking-widest mt-1">Completion Rate</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Updates Section -->
+    <section>
+        <div class="flex justify-between items-end mb-6">
+            <h2 class="text-2xl font-black text-on-surface uppercase tracking-tight flex items-center gap-3">
+                <span class="w-2 h-8 bg-primary-container inline-block"></span>
+                Recent Updates
+            </h2>
+            <a href="{{ url_for('updates') }}" class="text-xs font-mono text-[#85a600] font-bold uppercase tracking-widest hover:underline">View All</a>
+        </div>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {% for update in recent_updates[:5] %}
+            <a href="{{ update.remote_link or '#' }}" target="_blank" class="block group">
+                <div class="manga-panel overflow-hidden border-none shadow-sm group-hover:shadow-lg transition-all duration-300">
+                    <div class="relative h-60 w-full bg-gray-100 overflow-hidden">
+                        <img src="{{ update.cover_image | cover_fallback(update.title) }}" alt="{{ update.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.onerror=null; this.src='{{ "" | cover_fallback(update.title) }}';">
+                        
+                        <!-- Gradient Overlay for Text -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90"></div>
+                        
+                        <!-- Badges and Text over image -->
+                        <div class="absolute bottom-3 left-3 right-3">
+                            <span class="bg-primary-container text-black text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide inline-block mb-1">
+                                Ch. {{ update.remote_latest_chapter | format_chapter }}
+                            </span>
+                            <h3 class="text-white font-bold text-sm leading-tight line-clamp-1">{{ update.title }}</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="p-3 bg-white">
+                        {% set max_ch = update.remote_latest_chapter if update.remote_latest_chapter and update.remote_latest_chapter > (update.local_latest_chapter or 0) else (update.local_latest_chapter or 1) %}
+                        {% set progress = ((update.local_latest_chapter or 0) / max_ch * 100) if max_ch > 0 else 0 %}
+                        
+                        <div class="flex justify-between text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1.5">
+                            <span>Progress</span>
+                            <span>{{ progress|round|int }}%</span>
+                        </div>
+                        <div class="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-container" style="width: {{ progress }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% else %}
+            <div class="col-span-full manga-panel p-10 text-center text-gray-400">
+                <span class="material-symbols-outlined text-4xl mb-2">inventory_2</span>
+                <p>No recent updates found. Go to Library to scan for changes.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Bottom Split Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Col: Genres & Recommendations -->
+        <div class="lg:col-span-2 flex flex-col gap-10">
+            <!-- DNA / Genres -->
+            <section>
+                <h2 class="text-2xl font-black text-on-surface uppercase tracking-tight flex items-center gap-3 mb-6">
+                    <span class="w-2 h-8 bg-[#0ea5e9] inline-block"></span>
+                    Your DNA (Top Genres)
+                </h2>
+                <div class="flex flex-wrap gap-3">
+                    {% for genre in top_genres %}
+                    <div class="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-mono text-gray-700 shadow-sm hover:border-gray-300 transition-colors cursor-default">
+                        {{ genre.name }}
+                    </div>
+                    {% else %}
+                    <div class="text-gray-400 text-sm">No genre data available. Read more series to build your DNA.</div>
+                    {% endfor %}
+                </div>
+            </section>
+            
+            <!-- Recommendations Callout -->
+            <section class="manga-panel p-8 bg-white border border-gray-100 relative overflow-hidden">
+                <div class="absolute right-0 top-0 opacity-5 -translate-y-1/4 translate-x-1/4">
+                    <span class="material-symbols-outlined text-[200px]">auto_awesome</span>
+                </div>
+                <div class="relative z-10 max-w-md">
+                    <h3 class="text-3xl font-black text-on-surface mb-3 tracking-tight">Recommended for You</h3>
+                    <p class="text-gray-500 text-sm mb-6 leading-relaxed">
+                        Based on your love for <strong class="text-[#85a600]">{% if top_genres %}{{ top_genres[0].name }}{% else %}reading{% endif %}</strong>, our AI engine has discovered new titles you might enjoy.
+                    </p>
+                    <a href="{{ url_for('recommendations') }}" class="inline-flex items-center gap-2 bg-[#1a1a1c] text-white px-6 py-3 font-bold text-sm uppercase tracking-widest hover:bg-black transition-colors rounded-sm shadow-md">
+                        Explore Now <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                    </a>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Right Col: Global Activity Mockup (or other stats) -->
+        <div class="lg:col-span-1">
+            <div class="manga-panel p-6 h-full flex flex-col border-t-2 border-t-[#85a600]">
+                <div class="text-xs font-mono text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-100 pb-2">Global Activity</div>
+                
+                <div class="flex-1 flex flex-col gap-6">
+                    <div class="text-sm">
+                        <span class="font-bold text-[#0ea5e9]">System</span> synced <strong class="text-on-surface">AniList Trends</strong>
+                        <div class="text-[10px] text-gray-400 mt-1">2 mins ago</div>
+                    </div>
+                    <div class="border-b border-gray-100"></div>
+                    
+                    <div class="text-sm">
+                        <span class="font-bold text-[#0ea5e9]">Model</span> retrained weights based on your feedback
+                        <div class="text-[10px] text-gray-400 mt-1">15 mins ago</div>
+                    </div>
+                    <div class="border-b border-gray-100"></div>
+                    
+                    <div class="text-sm">
+                        <span class="font-bold text-[#0ea5e9]">Update</span>: {{ recent_updates[0].title if recent_updates else 'No recent updates' }}
+                        <div class="text-[10px] text-gray-400 mt-1">1 hour ago</div>
+                    </div>
+                </div>
+                
+                <a href="{{ url_for('updates') }}" class="mt-8 w-full border border-gray-200 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-widest hover:bg-gray-50 transition-colors">
+                    Activity Log
+                </a>
+            </div>
+        </div>
+        
+    </div>
+
+</div>
+{% endblock %}

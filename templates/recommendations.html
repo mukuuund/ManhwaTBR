@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col gap-8 w-full">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-2">
+        <div>
+            <h1 class="text-3xl font-black text-on-surface uppercase tracking-tighter mb-1">Your Next Obsession</h1>
+            <p class="text-sm text-gray-500 font-mono tracking-wide">Algorithmic predictions based on your reading DNA.</p>
+        </div>
+        
+        <div class="flex flex-wrap gap-3 items-center w-full md:w-auto">
+            <button id="retrainBtn" class="bg-white text-gray-700 px-4 py-2 text-sm font-bold border border-gray-300 rounded-sm shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors">
+                <span class="material-symbols-outlined text-lg">psychology</span>
+                Retrain Model
+            </button>
+            <button id="refreshTrendingBtn" class="bg-white text-gray-700 px-4 py-2 text-sm font-bold border border-gray-300 rounded-sm shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors">
+                <span class="material-symbols-outlined text-lg">sync</span>
+                Refresh Trends
+            </button>
+            <form action="{{ url_for('run_recommendations') }}" method="POST">
+                <button type="submit" class="bg-primary-container text-black px-4 py-2 text-sm font-bold shadow-md shadow-primary-container/20 rounded-sm flex items-center gap-2 hover:bg-[#aee600] transition-colors">
+                    <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                    Generate New
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Learning Status -->
+    <div class="bg-white border border-gray-200 p-4 rounded-sm shadow-sm flex items-center justify-between" id="learningStatus">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[#0ea5e9]">analytics</span>
+            <span class="font-bold text-sm text-gray-700 uppercase tracking-widest">Model Status</span>
+        </div>
+        <div class="text-xs font-mono text-gray-500" id="weightsDisplay">
+            Loading weights...
+        </div>
+    </div>
+
+    <!-- Bento Grid Recommendations -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for rec in recommendations %}
+        <article class="manga-panel flex flex-col group hover:-translate-y-1 transition-transform duration-200 shadow-sm hover:shadow-md">
+            
+            <div class="relative h-56 w-full overflow-hidden bg-gray-100">
+                <img src="{{ rec.cover_image | cover_fallback(rec.candidate_title) }}" alt="{{ rec.candidate_title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.onerror=null; this.src='{{ "" | cover_fallback(rec.candidate_title) }}';">
+                
+                <div class="absolute top-0 right-0 m-3">
+                    <div class="bg-primary-container text-black font-bold text-xs px-2 py-1 rounded-sm shadow-sm uppercase tracking-wider transform rotate-2">
+                        {{ (rec.score * 100) | round | int }}% Match
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 flex flex-col flex-grow bg-white">
+                <h4 class="font-bold text-gray-900 text-base leading-snug line-clamp-2 mb-2" title="{{ rec.candidate_title }}">{{ rec.candidate_title }}</h4>
+                
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                    {% for genre in rec.genres[:3] %}
+                    <span class="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 text-[10px] font-mono uppercase rounded-sm">{{ genre }}</span>
+                    {% endfor %}
+                </div>
+                
+                <p class="text-sm text-gray-500 mb-4 line-clamp-3 leading-relaxed border-l-2 border-gray-200 pl-3">
+                    {{ rec.reason }}
+                </p>
+                
+                <div class="mt-auto grid grid-cols-2 gap-2 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="sendFeedback('{{ rec.candidate_canonical }}', 'liked', this)" class="bg-gray-50 hover:bg-[#e0f2fe] hover:text-[#0369a1] text-gray-600 border border-gray-200 hover:border-[#bae6fd] py-1.5 text-xs font-bold uppercase tracking-widest transition-colors rounded-sm flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">thumb_up</span> Like
+                    </button>
+                    <button type="button" onclick="sendFeedback('{{ rec.candidate_canonical }}', 'disliked', this)" class="bg-gray-50 hover:bg-red-50 hover:text-red-600 text-gray-600 border border-gray-200 hover:border-red-200 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors rounded-sm flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">thumb_down</span> Pass
+                    </button>
+                    <button type="button" onclick="sendFeedback('{{ rec.candidate_canonical }}', 'already_read', this)" class="bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors rounded-sm col-span-1 flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">history</span> Read
+                    </button>
+                    <button type="button" onclick="sendFeedback('{{ rec.candidate_canonical }}', 'saved', this)" class="bg-white hover:bg-primary-container text-gray-700 hover:text-black border border-gray-300 hover:border-transparent py-1.5 text-xs font-bold uppercase tracking-widest transition-colors rounded-sm col-span-1 shadow-sm flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm">bookmark</span> Save
+                    </button>
+                </div>
+            </div>
+        </article>
+        {% else %}
+        <div class="col-span-full manga-panel p-16 text-center border-dashed flex flex-col items-center justify-center">
+            <span class="material-symbols-outlined text-[64px] text-gray-300 mb-4">search</span>
+            <p class="text-gray-900 font-bold text-xl mb-1">No predictions available</p>
+            <p class="text-gray-500 text-sm">Click "Generate New" to run the engine.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+async function sendFeedback(canonical, action, btnElem) {
+    const card = btnElem.closest('article');
+    
+    try {
+        const response = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({canonical, action})
+        });
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            throw new Error("Server returned non-JSON response");
+        }
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Request failed");
+        }
+        
+        if (['disliked', 'already_read', 'ignored'].includes(action)) {
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => card.style.display = 'none', 300);
+            }
+        } else {
+            // For liked/saved, show visual feedback
+            if (card) {
+                card.classList.add('ring-2', 'ring-primary-container', 'border-transparent');
+                const origHtml = btnElem.innerHTML;
+                btnElem.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Saved';
+                btnElem.classList.remove('bg-gray-50', 'bg-white', 'text-gray-600', 'text-gray-700');
+                btnElem.classList.add('bg-primary-container', 'text-black', 'border-transparent');
+            }
+        }
+    } catch(e) {
+        console.error("Feedback failed:", e);
+        alert("Failed: " + e.message);
+    }
+}
+
+document.getElementById('retrainBtn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Training...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/retrain-recommendation-weights', {method: 'POST'});
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Retrain failed");
+        alert(data.message);
+        loadWeights();
+    } catch (e) {
+        alert("Error retraining: " + e.message);
+    }
+    btn.innerHTML = origHtml;
+    btn.disabled = false;
+});
+
+document.getElementById('refreshTrendingBtn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Refreshing...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/populate-trending', {method: 'POST'});
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Refresh failed");
+        alert(`Successfully fetched ${data.inserted_or_updated} candidates.`);
+    } catch (e) {
+        alert("Error refreshing candidates: " + e.message);
+    }
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+});
+
+async function loadWeights() {
+    try {
+        const res = await fetch('/api/recommendations');
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || "Failed to load weights");
+        
+        const weightsDisplay = document.getElementById('weightsDisplay');
+        if (data.weights) {
+            const w = data.weights;
+            weightsDisplay.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span>Trained on <strong class="text-gray-700">${w.training_examples_count}</strong> examples</span>
+                    <div class="hidden md:flex items-center gap-4 ml-6">
+                        <span>Sem: <strong class="text-gray-700">${(w.semantic_weight*100).toFixed(0)}%</strong></span>
+                        <span>Gen: <strong class="text-gray-700">${(w.genre_weight*100).toFixed(0)}%</strong></span>
+                        <span>Pop: <strong class="text-gray-700">${(w.popularity_weight*100).toFixed(0)}%</strong></span>
+                        <span>Rat: <strong class="text-gray-700">${(w.rating_weight*100).toFixed(0)}%</strong></span>
+                        <span>Frs: <strong class="text-gray-700">${(w.freshness_weight*100).toFixed(0)}%</strong></span>
+                        <span>Fbk: <strong class="text-primary-container drop-shadow-sm font-bold text-sm">${(w.feedback_weight*100).toFixed(0)}%</strong></span>
+                    </div>
+                </div>
+            `;
+        } else {
+            weightsDisplay.innerHTML = "Using Default Weights.";
+        }
+    } catch (e) {
+        document.getElementById('weightsDisplay').innerHTML = "Failed to load weights.";
+    }
+}
+
+window.addEventListener('DOMContentLoaded', loadWeights);
+</script>
+{% endblock %}

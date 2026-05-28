@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col gap-6 w-full">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-2">
+        <div>
+            <h1 class="text-3xl font-black text-on-surface uppercase tracking-tighter mb-1">My Library</h1>
+            <p class="text-sm text-gray-500 font-mono tracking-wide">Manage your tracking list and updates.</p>
+        </div>
+        
+        <div class="flex flex-col gap-2 w-full md:w-auto">
+            <div class="flex flex-wrap gap-3 items-center">
+                <label class="bg-white text-gray-700 px-4 py-2 text-sm font-bold border border-gray-300 rounded-sm shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-lg">folder</span>
+                    Upload Manhwa Folder
+                    <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden" />
+                </label>
+                
+                <label class="bg-white text-gray-700 px-4 py-2 text-sm font-bold border border-gray-300 rounded-sm shadow-sm flex items-center gap-2 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-lg">upload_file</span>
+                    Import Files
+                    <input type="file" id="filesInput" multiple class="hidden" />
+                </label>
+                
+                <button id="refreshRemoteBtn" class="bg-primary-container text-black px-4 py-2 text-sm font-bold shadow-md shadow-primary-container/20 rounded-sm flex items-center gap-2 hover:bg-[#aee600] transition-colors">
+                    <span class="material-symbols-outlined text-lg">sync</span>
+                    Sync Remote
+                </button>
+            </div>
+            <p class="text-xs text-gray-400">Select your manhwa folder or multiple chapter files. We only scan filenames to detect progress.</p>
+        </div>
+    </div>
+
+    <!-- Import Status Banner -->
+    <div id="importStatus" class="hidden bg-white border-l-4 border-primary-container p-4 mb-2 shadow-sm rounded-r-md">
+        <h3 class="font-bold text-sm text-on-surface mb-1 uppercase tracking-wide">Importing</h3>
+        <p id="importMsg" class="text-sm text-gray-500">Processing...</p>
+        <div id="importWarnings" class="mt-2 text-amber-600 text-xs"></div>
+    </div>
+
+    <!-- Library List (Table/Card Hybrid) -->
+    <div class="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+        
+        <!-- Table Header (Hidden on mobile) -->
+        <div class="hidden md:grid grid-cols-12 gap-4 p-4 bg-gray-50 border-b border-gray-200 text-xs font-mono text-gray-500 uppercase tracking-widest">
+            <div class="col-span-4">Title</div>
+            <div class="col-span-2 text-center">Progress</div>
+            <div class="col-span-2 text-center">Remote</div>
+            <div class="col-span-2 text-center">Status</div>
+            <div class="col-span-2 text-right">Actions</div>
+        </div>
+
+        <div class="divide-y divide-gray-100">
+            {% for item in series %}
+            <!-- List Row -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center hover:bg-gray-50 transition-colors group">
+                
+                <!-- Title & Cover -->
+                <div class="col-span-1 md:col-span-4 flex items-center gap-4">
+                    <div class="w-12 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0 shadow-sm">
+                        <img src="{{ item.cover_image | cover_fallback(item.title) }}" alt="{{ item.title }}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='{{ "" | cover_fallback(item.title) }}';">
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-gray-900 leading-snug line-clamp-2" title="{{ item.title }}">{{ item.title }}</h3>
+                        <div class="text-xs text-gray-400 mt-1 uppercase font-mono tracking-wider">
+                            {{ item.remote_source or 'Local' }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="col-span-1 md:col-span-2 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-center text-sm">
+                    <span class="md:hidden text-xs font-mono text-gray-400 uppercase">My Ch.</span>
+                    <span class="font-bold text-gray-700">Ch. {{ item.local_latest_chapter | format_chapter }}</span>
+                </div>
+
+                <!-- Remote -->
+                <div class="col-span-1 md:col-span-2 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-center text-sm">
+                    <span class="md:hidden text-xs font-mono text-gray-400 uppercase">Remote</span>
+                    <span class="font-bold {% if item.chapters_behind and item.chapters_behind > 0 %}text-[#0ea5e9]{% else %}text-gray-400{% endif %}">
+                        Ch. {{ item.remote_latest_chapter | format_chapter if item.remote_latest_chapter else '?' }}
+                    </span>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="col-span-1 md:col-span-2 flex justify-end md:justify-center">
+                    {% if item.needs_review %}
+                        <span class="px-2.5 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[10px] font-bold uppercase tracking-widest">Review</span>
+                    {% elif item.chapters_behind and item.chapters_behind > 0 %}
+                        <span class="px-2.5 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-[10px] font-bold uppercase tracking-widest">+{{ item.chapters_behind | format_chapter }} New</span>
+                    {% else %}
+                        <span class="px-2.5 py-1 bg-gray-50 text-gray-500 border border-gray-200 rounded-full text-[10px] font-bold uppercase tracking-widest">Up to date</span>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="col-span-1 md:col-span-2 flex justify-end items-center gap-2">
+                    <!-- Preference Toggles -->
+                    <div class="flex bg-gray-100 rounded border border-gray-200 overflow-hidden">
+                        <button onclick="setLibraryPreference('{{ item.canonical }}', 'liked', this)" title="Like" class="p-1.5 hover:bg-white transition-colors {% if item.user_preference == 'liked' %}text-primary-container bg-white{% else %}text-gray-400{% endif %}">
+                            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' {% if item.user_preference == 'liked' %}1{% else %}0{% endif %};">thumb_up</span>
+                        </button>
+                        <button onclick="setLibraryPreference('{{ item.canonical }}', 'unliked', this)" title="Unlike" class="p-1.5 hover:bg-white transition-colors border-l border-gray-200 {% if item.user_preference == 'unliked' %}text-red-500 bg-white{% else %}text-gray-400{% endif %}">
+                            <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' {% if item.user_preference == 'unliked' %}1{% else %}0{% endif %};">thumb_down</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Edit Details / Link -->
+                    <details class="relative">
+                        <summary class="list-none cursor-pointer p-1.5 text-gray-400 hover:text-gray-800 transition-colors rounded hover:bg-gray-100">
+                            <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                        </summary>
+                        <div class="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 shadow-lg z-20 flex flex-col py-1 rounded-md">
+                            <button onclick="promptManualUpdate('{{ item.canonical }}', '{{ item.title | escape }}')" class="text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">edit</span> Edit Chapter
+                            </button>
+                            {% if item.remote_link %}
+                            <a href="{{ item.remote_link }}" target="_blank" class="text-left px-4 py-2 text-sm hover:bg-gray-50 text-[#0ea5e9] flex items-center gap-2 font-bold">
+                                <span class="material-symbols-outlined text-[18px]">open_in_new</span> Read Online
+                            </a>
+                            {% endif %}
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+            {% else %}
+            <div class="p-12 text-center">
+                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                    <span class="material-symbols-outlined text-gray-300 text-3xl">auto_stories</span>
+                </div>
+                <h3 class="text-gray-900 font-bold mb-1">No Series Tracked</h3>
+                <p class="text-gray-500 text-sm">Import a folder to begin building your library.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Close details dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('details')) {
+        document.querySelectorAll('details[open]').forEach(details => details.removeAttribute('open'));
+    }
+});
+document.querySelectorAll('details').forEach(details => {
+    details.addEventListener('click', function(e) {
+        if(e.target.tagName !== 'SUMMARY') return;
+        document.querySelectorAll('details[open]').forEach(d => {
+            if (d !== details) d.removeAttribute('open');
+        });
+    });
+});
+
+async function handleUpload(e) {
+    const files = e.target.files;
+    if (files.length === 0) return;
+    
+    // Check if flat files were selected but user might need folder mode
+    if (e.target.id === 'filesInput' && files.length > 0) {
+        // Just a quick check if they uploaded flat files but maybe they should have used folders
+        // We'll let the server parse them, but server relies on folders for title inference if filenames are just "page1.jpg"
+    }
+    
+    const statusDiv = document.getElementById('importStatus');
+    const msgP = document.getElementById('importMsg');
+    const warnDiv = document.getElementById('importWarnings');
+    
+    statusDiv.classList.remove('hidden');
+    msgP.innerText = `Uploading and processing ${files.length} files... This might take a moment.`;
+    warnDiv.innerHTML = '';
+    
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        // webkitRelativePath contains the directory structure
+        const path = files[i].webkitRelativePath || files[i].name;
+        // Append with the path as filename so server gets the folder structure!
+        formData.append('files', files[i], path);
+    }
+    
+    try {
+        const res = await fetch('/api/import-upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+            throw new Error(data.message || "Upload failed");
+        }
+        
+        msgP.innerHTML = `<span class="text-green-600 font-bold">Success!</span> Processed ${data.files_processed} files. Found ${data.imported_series_count} series updates.`;
+        if (data.warnings && data.warnings.length > 0) {
+            warnDiv.innerHTML = '<strong>Warnings:</strong><br>' + data.warnings.slice(0, 5).join('<br>') + (data.warnings.length > 5 ? '<br>...' : '');
+        }
+        
+        setTimeout(() => window.location.reload(), 2000);
+    } catch (err) {
+        if (err.message.includes("No valid files") && e.target.id === 'filesInput') {
+             msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Please upload a folder so we can detect manhwa names correctly.`;
+        } else {
+             msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> ${err.message}`;
+        }
+    }
+    
+    // Clear input
+    e.target.value = '';
+}
+
+document.getElementById('folderInput').addEventListener('change', handleUpload);
+document.getElementById('filesInput').addEventListener('change', handleUpload);
+
+document.getElementById('refreshRemoteBtn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Syncing...';
+    btn.disabled = true;
+    
+    try {
+        const res = await fetch('/api/refresh-remote-chapters', {method: 'POST'});
+        const data = await res.json();
+        if(data.summary) {
+            alert(data.message + "\n\nUpdated: " + data.summary.updated_count + 
+                  "\nNeeds Review: " + data.summary.needs_review_count);
+        } else {
+            alert(data.message);
+        }
+        window.location.reload();
+    } catch (err) {
+        alert('Error: ' + err);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+async function promptManualUpdate(canonical, title) {
+    const newVal = prompt(`Update chapter for "${title}":`);
+    if (newVal === null || newVal.trim() === '') return;
+    
+    try {
+        const res = await fetch('/api/manual-update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({canonical, remote_chapter: newVal})
+        });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch(e) { throw new Error("Server error"); }
+        
+        if (!res.ok || data.status !== 'success') {
+            throw new Error(data.message || "Update failed");
+        }
+        window.location.reload();
+    } catch(err) {
+        alert("Failed to update: " + err.message);
+    }
+}
+
+async function setLibraryPreference(canonical, preference, btnElem) {
+    try {
+        const res = await fetch('/api/library-feedback', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({canonical, preference})
+        });
+        const data = await res.json();
+        
+        if (!res.ok || data.status !== 'success') {
+            throw new Error(data.message || "Update failed");
+        }
+        window.location.reload();
+    } catch(err) {
+        alert("Failed to update preference: " + err.message);
+    }
+}
+</script>
+{% endblock %}

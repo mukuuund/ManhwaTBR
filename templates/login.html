@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-sm w-full mx-auto mt-20 mb-auto bg-[#111] p-8 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] border border-[#333] flex flex-col items-center relative z-10 text-gray-200">
+    <div class="mb-4">
+        <h1 class="font-display-xl text-3xl font-black uppercase tracking-tighter text-white mb-2 text-center w-full shadow-sm drop-shadow-lg">Manhwa<span class="text-primary-container">TBR</span></h1>
+    </div>
+    
+    <h2 class="text-xs font-bold mb-8 text-center text-gray-500 uppercase tracking-widest w-full border-b border-[#333] pb-4">Login</h2>
+    
+    <form method="POST" action="{{ url_for('login') }}" class="w-full space-y-5">
+        <div>
+            <label class="block text-xs font-bold font-mono text-gray-400 uppercase tracking-widest mb-1.5" for="email">Email</label>
+            <input type="email" id="email" name="email" required class="w-full bg-[#1a1a1c] text-white border border-[#333] rounded py-2.5 px-3 text-sm focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors shadow-inner">
+        </div>
+        <div>
+            <label class="block text-xs font-bold font-mono text-gray-400 uppercase tracking-widest mb-1.5" for="password">Password</label>
+            <input type="password" id="password" name="password" required class="w-full bg-[#1a1a1c] text-white border border-[#333] rounded py-2.5 px-3 text-sm focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors shadow-inner">
+        </div>
+        
+        <button type="submit" class="w-full bg-primary-container text-black font-bold py-3 px-4 rounded-sm uppercase tracking-widest hover:bg-[#aee600] transition-colors shadow-md mt-6">
+            Sign in
+        </button>
+    </form>
+    
+    <div class="mt-8 pt-4 border-t border-[#333] w-full text-center font-mono text-xs text-gray-500 uppercase tracking-wider">
+        Don't have an account? <a href="{{ url_for('signup') }}" class="text-primary-container font-bold hover:underline underline-offset-4 decoration-2">Create account</a>
+    </div>
+</div>
+{% endblock %}

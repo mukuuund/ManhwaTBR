@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+
+# Environment
+.env
+*.env
+
+# Telegram session
+*.session
+*.session-journal
+
+# VSCode
+.vscode/
+tempCodeRunnerFile.py
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Azure / Deployment
+*.sql
+*.bak
+venv/
+.venv/
+instance/
+logs/
+*.session
+_archive_before_deploy/

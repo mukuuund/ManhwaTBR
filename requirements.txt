@@ -1,0 +1,14 @@
+Flask==3.0.0
+Werkzeug==3.0.3
+mysql-connector-python==8.0.33
+pandas==2.0.3
+numpy==1.24.3
+sentence-transformers==2.2.2
+scikit-learn==1.3.0
+python-dotenv==1.0.0
+requests==2.31.0
+Telethon==1.30.3
+beautifulsoup4==4.12.3
+torch==2.3.0
+pytest==8.2.0
+gunicorn==21.2.0

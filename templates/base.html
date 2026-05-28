@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MANGA_TRACK</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: 'var(--color-bg-main)',
+                        surface: 'var(--color-bg-main)',
+                        'surface-container-lowest': 'var(--color-bg-card)',
+                        'surface-container-low': 'var(--color-bg-card)',
+                        'surface-container-high': 'var(--color-bg-card-hover)',
+                        'on-background': 'var(--color-text-main)',
+                        'on-surface': 'var(--color-text-main)',
+                        'on-surface-variant': 'var(--color-text-muted)',
+                        'primary-container': 'var(--color-neon-accent)',
+                        'on-primary-container': 'var(--color-on-neon)',
+                        'on-primary': 'var(--color-bg-main)',
+                        'primary': 'var(--color-text-main)',
+                        secondary: 'var(--color-text-muted)',
+                        neon: 'var(--color-neon-accent)',
+                        sidebar: 'var(--color-bg-sidebar)',
+                        'on-sidebar': 'var(--color-text-inverse)',
+                    },
+                    fontFamily: {
+                        'headline-lg-mobile': ["Anybody"],
+                        'body-md': ["Manrope"],
+                        'headline-lg': ["Anybody"],
+                        'label-sm': ["Space Grotesk"],
+                        'body-lg': ["Manrope"],
+                        'headline-md': ["Anybody"],
+                        'display-xl': ["Anybody"],
+                        'label-bold': ["Space Grotesk"],
+                        'mono': ["JetBrains Mono"]
+                    },
+                    spacing: {
+                        gutter: "24px",
+                        'margin-mobile': "16px",
+                        'margin-desktop': "48px"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .auth-bg {
+            background-image: url("{{ url_for('static', filename='images/login-bg.png') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .auth-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface antialiased min-h-screen flex selection:bg-primary-container selection:text-black {% if request.endpoint in ['login', 'signup'] %}auth-bg{% else %}bg-background{% endif %}">
+    {% if request.endpoint in ['login', 'signup'] %}
+    <div class="auth-overlay"></div>
+    {% endif %}
+    
+    {% if current_user %}
+    <!-- SideNavBar (Full height, left) -->
+    <aside class="bg-sidebar w-64 hidden lg:flex flex-col border-r border-gray-200 shrink-0 z-40 fixed inset-y-0 left-0">
+        <!-- Brand -->
+        <div class="p-6 pb-8 flex flex-col items-center border-b border-gray-800">
+            <a class="font-display-xl text-3xl font-black uppercase tracking-tighter text-primary-container mb-4 w-full text-center" href="{{ url_for('dashboard') }}">
+                ManhwaTBR
+            </a>
+            <div class="w-20 h-20 bg-gray-800 rounded-lg border-2 border-primary-container flex items-center justify-center overflow-hidden shadow-[0_0_15px_rgba(195,244,0,0.3)]">
+                <span class="text-4xl font-bold text-primary-container">{{ (current_email.split('@')[0][0] if current_email else (current_user[0] if current_user else '?')) | upper }}</span>
+            </div>
+            <div class="mt-3 text-center">
+                <div class="font-headline-md text-lg font-bold text-on-sidebar">{{ current_user or 'Pro Hunter' }}</div>
+                <div class="font-label-sm text-xs text-gray-500 uppercase tracking-widest mt-1">Level 99 Reader</div>
+            </div>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-6 flex flex-col gap-1">
+            <a href="{{ url_for('dashboard') }}" class="flex items-center gap-4 font-label-bold text-sm p-4 mx-0 transition-all {% if request.endpoint == 'dashboard' %}bg-[#1a1a1c] border-l-4 border-primary-container text-on-sidebar{% else %}text-gray-400 border-l-4 border-transparent hover:bg-gray-900 hover:text-on-sidebar{% endif %}">
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+            <a href="{{ url_for('library') }}" class="flex items-center gap-4 font-label-bold text-sm p-4 mx-0 transition-all {% if request.endpoint == 'library' %}bg-[#1a1a1c] border-l-4 border-primary-container text-on-sidebar{% else %}text-gray-400 border-l-4 border-transparent hover:bg-gray-900 hover:text-on-sidebar{% endif %}">
+                <span class="material-symbols-outlined">auto_stories</span>
+                Library
+            </a>
+            <a href="{{ url_for('updates') }}" class="flex items-center gap-4 font-label-bold text-sm p-4 mx-0 transition-all {% if request.endpoint == 'updates' %}bg-[#1a1a1c] border-l-4 border-primary-container text-on-sidebar{% else %}text-gray-400 border-l-4 border-transparent hover:bg-gray-900 hover:text-on-sidebar{% endif %}">
+                <span class="material-symbols-outlined">notifications_active</span>
+                Updates
+            </a>
+            <a href="{{ url_for('recommendations') }}" class="flex items-center gap-4 font-label-bold text-sm p-4 mx-0 transition-all {% if request.endpoint == 'recommendations' %}bg-[#1a1a1c] border-l-4 border-primary-container text-on-sidebar{% else %}text-gray-400 border-l-4 border-transparent hover:bg-gray-900 hover:text-on-sidebar{% endif %}">
+                <span class="material-symbols-outlined">auto_awesome</span>
+                Recommendations
+            </a>
+        </div>
+        
+        <div class="p-6 pb-8 border-t border-gray-800">
+            <form action="{{ url_for('scan_local') }}" method="POST">
+                <button type="submit" class="w-full font-label-bold text-sm bg-primary-container text-black py-3 hover:bg-[#aee600] transition-colors rounded-sm flex justify-center items-center gap-2 font-bold shadow-md shadow-primary-container/20">
+                    START READING
+                </button>
+            </form>
+        </div>
+    </aside>
+    {% endif %}
+    
+    <!-- Main Content Area Wrapper -->
+    <div class="flex-1 flex flex-col min-h-screen {% if current_user %}lg:ml-64{% endif %} {% if request.endpoint not in ['login', 'signup'] %}bg-background{% else %}relative z-10{% endif %}">
+        
+        {% if current_user %}
+        <!-- TopNavBar (Light, right side) -->
+        <nav class="bg-surface-container-lowest w-full top-0 sticky border-b border-gray-200 shadow-sm z-30">
+            <div class="flex justify-between items-center px-8 py-4 max-w-[1440px] mx-auto">
+                <div class="hidden md:flex gap-6">
+                    <a href="{{ url_for('dashboard') }}" class="font-label-bold text-sm {% if request.endpoint == 'dashboard' %}text-primary-container font-bold{% else %}text-secondary hover:text-on-surface{% endif %} transition-colors">Home</a>
+                    <a href="{{ url_for('recommendations') }}" class="font-label-bold text-sm {% if request.endpoint == 'recommendations' %}text-primary-container font-bold{% else %}text-secondary hover:text-on-surface{% endif %} transition-colors">Browse</a>
+                </div>
+                
+                <!-- Search bar -->
+                <div class="hidden lg:flex max-w-md w-full mx-8 relative" id="searchBarContainer">
+                    <div class="relative w-full">
+                        <input type="text" id="globalSearchInput" placeholder="Search Title..." class="w-full bg-surface-container-high border-none rounded-md py-2 px-4 text-sm focus:ring-1 focus:ring-primary-container outline-none transition-all text-on-surface">
+                        <div id="searchSpinner" class="absolute right-3 top-2.5 hidden">
+                            <span class="material-symbols-outlined text-sm text-secondary animate-spin">sync</span>
+                        </div>
+                    </div>
+                    <!-- Dropdown Results Panel -->
+                    <div id="searchResultsDropdown" class="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 shadow-xl rounded-md hidden max-h-[450px] overflow-y-auto z-50 p-2 divide-y divide-gray-100">
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <button id="notificationBtn" class="text-secondary hover:text-primary-container transition-colors relative"><span class="material-symbols-outlined">notifications</span><span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden"></span></button>
+                        <div id="notificationDropdown" class="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 shadow-xl rounded-md hidden z-50 p-3 flex flex-col gap-2">
+                            <div class="text-sm font-bold border-b border-gray-100 pb-2">Notifications</div>
+                            <div id="notificationContent" class="text-xs text-gray-600 flex flex-col gap-2">
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+                    {% if current_user %}
+                    <a href="{{ url_for('logout') }}" title="Logout" class="text-secondary hover:text-primary-container transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined">logout</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('login') }}" class="text-secondary hover:text-primary-container transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined">login</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+        {% endif %}
+        
+        <main class="flex-1 w-full p-6 md:p-10 max-w-[1440px] mx-auto">
+            <!-- Flash Messages -->
+            <div class="mb-6 space-y-2">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="px-4 py-3 rounded-md shadow-sm font-label-bold text-sm flex items-center gap-2 border-l-4
+                                {% if category == 'success' %} bg-green-50 border-green-500 text-green-800 
+                                {% elif category == 'error' %} bg-red-50 border-red-500 text-red-800 
+                                {% elif category == 'warning' %} bg-amber-50 border-amber-500 text-amber-800 
+                                {% else %} bg-gray-50 border-gray-500 text-gray-800 {% endif %}">
+                                {% if category == 'success' %}<span class="material-symbols-outlined text-green-600 text-lg">check_circle</span>
+                                {% elif category == 'error' %}<span class="material-symbols-outlined text-red-600 text-lg">error</span>
+                                {% endif %}
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            {% block content %}{% endblock %}
+        </main>
+        
+        {% if request.endpoint not in ['login', 'signup'] %}
+        <!-- Footer -->
+        <footer class="bg-surface-container-lowest w-full py-6 mt-auto border-t border-gray-200">
+            <div class="flex justify-between items-center px-10 w-full text-secondary max-w-[1440px] mx-auto">
+                <div class="flex gap-6 font-mono text-xs">
+                    <a href="{{ url_for('terms') }}" class="hover:text-on-surface transition-colors">Terms</a>
+                    <a href="{{ url_for('privacy') }}" class="hover:text-on-surface transition-colors">Privacy</a>
+                    <a href="{{ url_for('api_docs') }}" class="hover:text-on-surface transition-colors">API Docs</a>
+                </div>
+                <div class="font-mono text-xs uppercase tracking-widest text-gray-400">
+                    © 2026 ManhwaTBR. All rights reserved.
+                </div>
+            </div>
+        </footer>
+        {% endif %}
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('globalSearchInput');
+        const searchDropdown = document.getElementById('searchResultsDropdown');
+        const searchSpinner = document.getElementById('searchSpinner');
+        let debounceTimer;
+
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const query = searchInput.value.trim();
+            
+            if (query.length < 2) {
+                searchDropdown.classList.add('hidden');
+                searchDropdown.innerHTML = '';
+                return;
+            }
+
+            searchSpinner.classList.remove('hidden');
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    
+                    searchDropdown.innerHTML = '';
+                    searchDropdown.classList.remove('hidden');
+                    
+                    const results = data.results || [];
+                    if (results.length === 0) {
+                        searchDropdown.innerHTML = `
+                            <div class="p-4 text-center text-gray-500 text-sm">
+                                No manhwa found for: <strong class="text-gray-800">"${escapeHtml(query)}"</strong>
+                            </div>
+                        `;
+                    } else {
+                        results.forEach(item => {
+                            const genresHtml = item.genres.slice(0, 2).map(g => 
+                                `<span class="bg-gray-100 text-gray-600 border border-gray-200 px-1.5 py-0.5 text-[9px] font-mono uppercase rounded-sm">${escapeHtml(g)}</span>`
+                            ).join(' ');
+
+                            const actionBtn = item.in_library 
+                                ? `<span class="text-green-600 text-xs font-bold flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-sm">check_circle</span> In Library</span>`
+                                : `<button onclick="addSearchItemToLibrary('${item.canonical}', '${escapeHtml(item.title).replace(/'/g, "\\'")}', this)" class="bg-primary-container hover:bg-[#aee600] text-black font-bold text-[10px] px-2.5 py-1.5 rounded-sm uppercase tracking-wider shrink-0 transition-colors shadow-sm">Add</button>`;
+
+                            const card = document.createElement('div');
+                            card.className = "flex items-center gap-3 p-2 hover:bg-gray-50 transition-colors";
+                            card.innerHTML = `
+                                <img src="${item.cover_image}" alt="${escapeHtml(item.title)}" class="w-10 h-14 object-cover rounded shadow-sm shrink-0">
+                                <div class="flex-grow min-w-0">
+                                    <h4 class="font-bold text-xs text-gray-900 truncate leading-snug" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h4>
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        ${genresHtml || '<span class="text-[9px] text-gray-400 font-mono uppercase">No Genres</span>'}
+                                    </div>
+                                </div>
+                                ${actionBtn}
+                            `;
+                            searchDropdown.appendChild(card);
+                        });
+                    }
+                } catch (err) {
+                    console.error(err);
+                    searchDropdown.innerHTML = `<div class="p-3 text-center text-red-500 text-xs">Error loading results</div>`;
+                } finally {
+                    searchSpinner.classList.add('hidden');
+                }
+            }, 300);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#searchBarContainer')) {
+                searchDropdown.classList.add('hidden');
+            }
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim().length >= 2) {
+                searchDropdown.classList.remove('hidden');
+            }
+        });
+        
+        // Notification Logic
+        const notifBtn = document.getElementById('notificationBtn');
+        const notifDropdown = document.getElementById('notificationDropdown');
+        const notifContent = document.getElementById('notificationContent');
+        const notifBadge = document.getElementById('notificationBadge');
+        
+        if (notifBtn) {
+            let currentTotal = 0;
+            // Load notifications on page load
+            fetch('/api/notifications')
+                .then(res => res.json())
+                .then(data => {
+                    currentTotal = data.updates_count + data.needs_review_count + data.recommendation_count;
+                    
+                    const lastSeenCount = localStorage.getItem('last_seen_notification_count');
+                    
+                    if (currentTotal > 0 && String(currentTotal) !== lastSeenCount) {
+                        notifBadge.innerText = currentTotal;
+                        notifBadge.classList.remove('hidden');
+                    }
+                    
+                    let html = '';
+                    if (data.updates_count > 0) {
+                        html += `<div><strong class="text-primary-container text-black px-1 rounded">${data.updates_count}</strong> updates available</div>`;
+                        data.latest_updates.forEach(u => {
+                            html += `<div class="truncate pl-2 text-gray-500">- ${escapeHtml(u)} has new chapters</div>`;
+                        });
+                    }
+                    if (data.needs_review_count > 0) {
+                        html += `<div class="mt-1"><strong class="text-yellow-500">${data.needs_review_count}</strong> needs review</div>`;
+                    }
+                    if (data.recommendation_count > 0) {
+                        html += `<div class="mt-1"><strong class="text-blue-500">${data.recommendation_count}</strong> recommendations</div>`;
+                    }
+                    
+                    if (!html) {
+                        html = "No new notifications";
+                    }
+                    notifContent.innerHTML = html;
+                })
+                .catch(err => {
+                    notifContent.innerHTML = "Error loading notifications";
+                });
+                
+            notifBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('hidden');
+                
+                // Hide badge and mark as seen
+                notifBadge.classList.add('hidden');
+                localStorage.setItem('last_seen_notification_count', String(currentTotal));
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#notificationDropdown') && !e.target.closest('#notificationBtn')) {
+                    notifDropdown.classList.add('hidden');
+                }
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    notifDropdown.classList.add('hidden');
+                }
+            });
+        }
+    });
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    async function addSearchItemToLibrary(canonical, title, btn) {
+        btn.disabled = true;
+        btn.innerText = '...';
+        try {
+            const res = await fetch('/api/library/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({canonical, title})
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                btn.outerHTML = `<span class="text-green-600 text-xs font-bold flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-sm">check_circle</span> Added</span>`;
+                if (window.location.pathname === '/library') {
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } else {
+                alert("Failed to add: " + (data.message || "Unknown error"));
+                btn.disabled = false;
+                btn.innerText = 'Add';
+            }
+        } catch (err) {
+            alert("Error adding item: " + err);
+            btn.disabled = false;
+            btn.innerText = 'Add';
+        }
+    }
+    </script>
+</body>
+</html>

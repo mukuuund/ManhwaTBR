@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-surface-container-lowest p-8 md:p-12 rounded-xl shadow-sm border border-gray-200 mt-8 mb-12">
+    <div class="mb-8 border-b border-gray-100 pb-6">
+        <h1 class="text-3xl font-black text-gray-900 uppercase tracking-tighter">API Docs</h1>
+    </div>
+    
+    <div class="space-y-8 text-gray-600 font-body-md leading-relaxed">
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Authentication</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/login</code> - User authentication</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/logout</code> - Clear session</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/signup</code> - Register new user</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Library</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/library</code> - View tracked manhwa</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/api/library</code> - Get library data (JSON)</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/api/library/add</code> - Add manhwa to library</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Updates & Dashboard</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/dashboard</code> - View user statistics</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/updates</code> - View available chapters</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Recommendations</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/recommendations</code> - View personalized recommendations</li>
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/api/recommendations</code> - Fetch recommendation data (JSON)</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Search</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/api/search</code> - Global search for manhwa</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 font-mono uppercase tracking-widest border-l-4 border-primary-container pl-3">Notifications</h3>
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li><code class="bg-gray-100 px-1.5 py-0.5 rounded text-gray-800">/api/notifications</code> - Get notification counts and alerts</li>
+            </ul>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

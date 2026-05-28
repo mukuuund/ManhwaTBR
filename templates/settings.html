@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col gap-6 w-full max-w-3xl">
+    
+    <div class="mb-4">
+        <h1 class="text-3xl font-black text-on-surface uppercase tracking-tighter mb-1">System Config</h1>
+        <p class="text-sm text-gray-500 font-mono tracking-wide">Manage your application parameters.</p>
+    </div>
+
+    <!-- Diagnostics -->
+    <section class="manga-panel flex flex-col bg-white overflow-hidden">
+        <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+            <span class="material-symbols-outlined text-gray-400">memory</span>
+            <h3 class="font-bold text-gray-900 uppercase tracking-widest text-sm">Diagnostics</h3>
+        </div>
+        <div class="p-6 space-y-4 text-sm font-mono text-gray-600">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center py-3 border-b border-gray-100 border-dashed">
+                <span class="uppercase tracking-widest">Database Uplink</span>
+                <span class="mt-1 md:mt-0 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold
+                    {% if settings.db_status == 'Connected' %} bg-green-50 text-green-600 border border-green-200
+                    {% else %} bg-red-50 text-red-600 border border-red-200 {% endif %}">
+                    {{ settings.db_status }}
+                </span>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center py-3 border-b border-gray-100 border-dashed">
+                <span class="uppercase tracking-widest">Local Directory</span>
+                <span class="mt-1 md:mt-0 text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-200 break-all max-w-sm">
+                    {{ settings.manhwa_folder }}
+                </span>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center py-3 border-b border-gray-100 border-dashed">
+                <span class="uppercase tracking-widest">Environment File</span>
+                <span class="mt-1 md:mt-0 text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-200 break-all max-w-sm">
+                    {{ settings.env_loaded_path }}
+                </span>
+            </div>
+            
+            <div class="flex justify-between items-center py-3 border-b border-gray-100 border-dashed">
+                <span class="uppercase tracking-widest">TG API ID</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] uppercase font-bold
+                    {% if settings.telegram_api_id_configured %} bg-blue-50 text-blue-600 border border-blue-200
+                    {% else %} bg-amber-50 text-amber-600 border border-amber-200 {% endif %}">
+                    {% if settings.telegram_api_id_configured %} VERIFIED {% else %} MISSING {% endif %}
+                </span>
+            </div>
+            
+            <div class="flex justify-between items-center py-3 border-b border-gray-100 border-dashed">
+                <span class="uppercase tracking-widest">TG API HASH</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] uppercase font-bold
+                    {% if settings.telegram_api_hash_configured %} bg-blue-50 text-blue-600 border border-blue-200
+                    {% else %} bg-amber-50 text-amber-600 border border-amber-200 {% endif %}">
+                    {% if settings.telegram_api_hash_configured %} VERIFIED {% else %} MISSING {% endif %}
+                </span>
+            </div>
+            
+            <div class="flex justify-between items-center py-3">
+                <span class="uppercase tracking-widest">TG PHONE</span>
+                <span class="px-2.5 py-0.5 rounded text-[10px] uppercase font-bold
+                    {% if settings.telegram_phone_configured %} bg-blue-50 text-blue-600 border border-blue-200
+                    {% else %} bg-amber-50 text-amber-600 border border-amber-200 {% endif %}">
+                    {% if settings.telegram_phone_configured %} VERIFIED {% else %} MISSING {% endif %}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instructions -->
+    <section class="manga-panel flex flex-col bg-white overflow-hidden">
+        <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+            <span class="material-symbols-outlined text-gray-400">terminal</span>
+            <h3 class="font-bold text-gray-900 uppercase tracking-widest text-sm">Manual Override</h3>
+        </div>
+        <div class="p-6 text-gray-600 text-sm space-y-4 leading-relaxed">
+            <p>
+                System configuration is managed via the <code class="bg-gray-100 text-gray-800 border border-gray-200 px-1.5 py-0.5 rounded font-mono">.env</code> root file. Changes require a full server restart to propagate.
+            </p>
+            <div class="border-l-4 border-primary-container bg-gray-50 p-4 rounded-r mt-4">
+                <p class="font-bold uppercase text-gray-900 tracking-widest mb-1 text-xs">Telegram Subsystem</p>
+                <p>
+                    To enable Telegram integrations, supply <code class="font-mono text-xs">TELEGRAM_API_ID</code> and <code class="font-mono text-xs">TELEGRAM_API_HASH</code> in the env file. Credentials can be acquired from <a href="https://my.telegram.org/" target="_blank" class="text-[#0ea5e9] hover:underline font-bold decoration-2 underline-offset-2">my.telegram.org</a>.
+                </p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

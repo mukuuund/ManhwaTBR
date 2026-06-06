@@ -4,52 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MANGA_TRACK</title>
-    <script>
-        tailwind = {
-            config: {
-                darkMode: 'class',
-                theme: {
-                extend: {
-                    colors: {
-                        background: 'var(--color-bg-main)',
-                        surface: 'var(--color-bg-main)',
-                        'surface-container-lowest': 'var(--color-bg-card)',
-                        'surface-container-low': 'var(--color-bg-card)',
-                        'surface-container-high': 'var(--color-bg-card-hover)',
-                        'on-background': 'var(--color-text-main)',
-                        'on-surface': 'var(--color-text-main)',
-                        'on-surface-variant': 'var(--color-text-muted)',
-                        'primary-container': 'var(--color-neon-accent)',
-                        'on-primary-container': 'var(--color-on-neon)',
-                        'on-primary': 'var(--color-bg-main)',
-                        'primary': 'var(--color-text-main)',
-                        secondary: 'var(--color-text-muted)',
-                        neon: 'var(--color-neon-accent)',
-                        sidebar: 'var(--color-bg-sidebar)',
-                        'on-sidebar': 'var(--color-text-inverse)',
-                    },
-                    fontFamily: {
-                        'headline-lg-mobile': ["Anybody"],
-                        'body-md': ["Manrope"],
-                        'headline-lg': ["Anybody"],
-                        'label-sm': ["Space Grotesk"],
-                        'body-lg': ["Manrope"],
-                        'headline-md': ["Anybody"],
-                        'display-xl': ["Anybody"],
-                        'label-bold': ["Space Grotesk"],
-                        'mono': ["JetBrains Mono"]
-                    },
-                    spacing: {
-                        gutter: "24px",
-                        'margin-mobile': "16px",
-                        'margin-desktop': "48px"
-                    }
-                }
-            }
-        }
-    }
-    </script>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2">

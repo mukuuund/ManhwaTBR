@@ -30,3 +30,4 @@ instance/
 logs/
 *.session
 _archive_before_deploy/
+node_modules/

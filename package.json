@@ -1,0 +1,26 @@
+{
+  "name": "manhwa-tracker-recommendation-system-main",
+  "version": "1.0.0",
+  "description": "A Flask web application for tracking your local manhwa library, comparing it with Telegram updates, and generating personalized recommendations using an advanced hybrid scoring engine.",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mukuuund/ManhwaTBR.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mukuuund/ManhwaTBR/issues"
+  },
+  "homepage": "https://github.com/mukuuund/ManhwaTBR#readme",
+  "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.11",
+    "tailwindcss": "^3.4.16"
+  }
+}

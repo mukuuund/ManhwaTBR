@@ -170,75 +170,98 @@ async function handleUpload(e) {
     
     const isFolderInput = e.target.id === 'folderInput';
     
-    // Process files into a summary
     const seriesMap = new Map();
-    const chapterRegex = /(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)/i;
+    const ignoredFolders = ["telegram desktop", "downloads", "screenshots", "images", "pictures", "desktop", "whatsapp images", "local", "uploads"];
+    const chapterFolderRegex = /^(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)$/i;
     
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const path = file.webkitRelativePath || file.name;
         const parts = path.split('/');
+        const fileName = parts[parts.length - 1];
         
-        let title = parts[0];
-        if (parts.length < 2 && isFolderInput) {
-            // Probably just a single folder selected or flat files
-            title = "Unknown Series";
-        } else if (!isFolderInput) {
-             title = "Unknown Series (Files Only)";
-        }
-        
-        // Remove trailing slash/extensions if they somehow got in title
-        title = title.trim();
-        
-        // Infer chapter from the path components
+        let title = null;
         let chapterNum = 0;
         let chapterFound = false;
         
-        // Search through parts (like "Chapter 120")
-        for (let j = 0; j < parts.length; j++) {
-            const m = parts[j].match(chapterRegex);
-            if (m && m[1]) {
-                chapterNum = Math.max(chapterNum, parseFloat(m[1]));
+        const fileExtMatch = fileName.match(/^(.*?)\.[a-z0-9]+$/i);
+        const nameWithoutExt = fileExtMatch ? fileExtMatch[1] : fileName;
+        
+        // 1. Check for [170] Title @Channel pattern
+        const bracketMatch = nameWithoutExt.match(/^\s*\[\s*(\d+(?:\.\d+)?)\s*\]\s*(.*)$/i);
+        if (bracketMatch) {
+            chapterNum = parseFloat(bracketMatch[1]);
+            chapterFound = true;
+            let possibleTitle = bracketMatch[2].replace(/\s*@.*$/, '').trim();
+            if (possibleTitle.length > 0) title = possibleTitle;
+        }
+        
+        // 2. Check for other chapter patterns in filename
+        if (!title && !chapterFound) {
+            const m = nameWithoutExt.match(/(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)/i) || nameWithoutExt.match(/(?:^|[ \-_])(\d+(?:\.\d+)?)(?:[ \-_]|$)/i);
+            if (m && m[1] && !nameWithoutExt.match(/^(?:page|image|img|pic)\s*\d+/i)) {
+                chapterNum = parseFloat(m[1]);
                 chapterFound = true;
+                let possibleTitle = nameWithoutExt.replace(m[0], '').replace(/\s*@.*$/, '').replace(/^[ \-_]+|[ \-_]+$/g, '').trim();
+                if (possibleTitle.length > 0) title = possibleTitle;
             }
         }
         
-        // If not found in parts, check if the file name itself has a number
+        // 3. Fallback: look at folder names
+        if (!title) {
+            for (let j = parts.length - 2; j >= 0; j--) {
+                const p = parts[j];
+                const pLower = p.toLowerCase();
+                if (ignoredFolders.includes(pLower) || chapterFolderRegex.test(pLower)) {
+                    continue;
+                }
+                title = p;
+                break;
+            }
+        }
+        
+        // Search folders for chapter if still not found
         if (!chapterFound) {
-            const fileName = parts[parts.length - 1];
-            // Only use filename if it's not just "page1.jpg"
-            if (!fileName.match(/^(?:page|image|img|pic)\s*\d+/i)) {
-                const m = fileName.match(/(\d+(?:\.\d+)?)/);
+            for (let j = 0; j < parts.length - 1; j++) {
+                const m = parts[j].match(/(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)/i);
                 if (m && m[1]) {
                     chapterNum = Math.max(chapterNum, parseFloat(m[1]));
+                    chapterFound = true;
                 }
             }
         }
         
-        if (!seriesMap.has(title)) {
-            seriesMap.set(title, {
+        let needs_review = false;
+        if (!title) {
+            title = "Unknown Title";
+            needs_review = true;
+        }
+        
+        const canonical = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        
+        if (!seriesMap.has(canonical)) {
+            seriesMap.set(canonical, {
                 title: title,
                 latest_chapter: chapterNum,
-                file_count: 1,
-                sample_path: path
+                needs_review: needs_review,
+                file_count: 1
             });
         } else {
-            const existing = seriesMap.get(title);
+            const existing = seriesMap.get(canonical);
             existing.latest_chapter = Math.max(existing.latest_chapter, chapterNum);
             existing.file_count++;
+            if (needs_review && existing.title !== "Unknown Title") {
+                // If it already has a valid title, don't overwrite it with Unknown Title
+            } else if (title !== "Unknown Title") {
+                existing.title = title;
+                existing.needs_review = false;
+            }
         }
     }
     
     const summaryList = Array.from(seriesMap.values());
     if (summaryList.length === 0) {
-        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Could not detect any valid manhwa folders.`;
-        e.target.value = '';
-        return;
-    }
-    
-    // Check if we couldn't infer titles properly
-    if (summaryList.length === 1 && summaryList[0].title.startsWith("Unknown Series")) {
-        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Could not detect title. Please select the parent manhwa folder.`;
+        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Could not detect any valid manhwa.`;
         e.target.value = '';
         return;
     }
@@ -248,9 +271,7 @@ async function handleUpload(e) {
     try {
         const res = await fetch('/api/import-folder-summary', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(summaryList)
         });
         
@@ -266,7 +287,6 @@ async function handleUpload(e) {
         msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> ${err.message}`;
     }
     
-    // Clear input
     e.target.value = '';
 }
 
@@ -320,6 +340,35 @@ async function promptManualUpdate(canonical, title) {
 }
 
 async function setLibraryPreference(canonical, preference, btnElem) {
+    const parentDiv = btnElem.closest('div.flex');
+    const likeBtn = parentDiv.querySelector('button[title="Like"]');
+    const unlikeBtn = parentDiv.querySelector('button[title="Unlike"]');
+    
+    // Store original states to revert
+    const origLikeClasses = likeBtn.className;
+    const origUnlikeClasses = unlikeBtn.className;
+    const origLikeIcon = likeBtn.querySelector('span').style.fontVariationSettings;
+    const origUnlikeIcon = unlikeBtn.querySelector('span').style.fontVariationSettings;
+    
+    // Optimistic Update
+    if (preference === 'liked') {
+        likeBtn.className = "p-1.5 hover:bg-white transition-colors text-primary-container bg-white";
+        likeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 1";
+        unlikeBtn.className = "p-1.5 hover:bg-white transition-colors border-l border-gray-200 text-gray-400";
+        unlikeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+    } else if (preference === 'unliked') {
+        unlikeBtn.className = "p-1.5 hover:bg-white transition-colors border-l border-gray-200 text-red-500 bg-white";
+        unlikeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 1";
+        likeBtn.className = "p-1.5 hover:bg-white transition-colors text-gray-400";
+        likeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+    } else {
+        // neutral
+        likeBtn.className = "p-1.5 hover:bg-white transition-colors text-gray-400";
+        likeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+        unlikeBtn.className = "p-1.5 hover:bg-white transition-colors border-l border-gray-200 text-gray-400";
+        unlikeBtn.querySelector('span').style.fontVariationSettings = "'FILL' 0";
+    }
+    
     try {
         const res = await fetch('/api/library-feedback', {
             method: 'POST',
@@ -331,8 +380,13 @@ async function setLibraryPreference(canonical, preference, btnElem) {
         if (!res.ok || data.status !== 'success') {
             throw new Error(data.message || "Update failed");
         }
-        window.location.reload();
+        // Success: no reload needed, UI is already updated
     } catch(err) {
+        // Revert on error
+        likeBtn.className = origLikeClasses;
+        unlikeBtn.className = origUnlikeClasses;
+        likeBtn.querySelector('span').style.fontVariationSettings = origLikeIcon;
+        unlikeBtn.querySelector('span').style.fontVariationSettings = origUnlikeIcon;
         alert("Failed to update preference: " + err.message);
     }
 }

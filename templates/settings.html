@@ -83,7 +83,45 @@
                     To enable Telegram integrations, supply <code class="font-mono text-xs">TELEGRAM_API_ID</code> and <code class="font-mono text-xs">TELEGRAM_API_HASH</code> in the env file. Credentials can be acquired from <a href="https://my.telegram.org/" target="_blank" class="text-[#0ea5e9] hover:underline font-bold decoration-2 underline-offset-2">my.telegram.org</a>.
                 </p>
             </div>
+            
+            <div class="border-l-4 border-red-400 bg-gray-50 p-4 rounded-r mt-4">
+                <p class="font-bold uppercase text-gray-900 tracking-widest mb-1 text-xs text-red-600">Database Cleanup</p>
+                <p class="mb-3">
+                    If your database contains invalid series generated from generic folder names (e.g., "Telegram Desktop", "Downloads"), you can mark them for review.
+                </p>
+                <button id="cleanupTitlesBtn" class="bg-red-50 text-red-600 px-4 py-2 text-sm font-bold border border-red-200 rounded-sm shadow-sm hover:bg-red-100 transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">cleaning_services</span>
+                    Clean Up Generic Titles
+                </button>
+            </div>
         </div>
     </section>
+</div>
+
+<script>
+document.getElementById('cleanupTitlesBtn')?.addEventListener('click', async (e) => {
+    if (!confirm("This will rename generic titles like 'Telegram Desktop' to 'Unknown Title' and mark them for review. Continue?")) return;
+    
+    const btn = e.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Cleaning...';
+    btn.disabled = true;
+    
+    try {
+        const res = await fetch('/api/cleanup-generic-titles', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Successfully marked ${data.affected_rows} generic series for review.`);
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch (err) {
+        alert("Error during cleanup: " + err.message);
+    }
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+});
+</script>
 </div>
 {% endblock %}

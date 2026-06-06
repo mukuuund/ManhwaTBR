@@ -383,11 +383,12 @@ def api_import_folder_summary():
         return jsonify({"success": False, "error": "Expected a JSON array of items"}), 400
         
     series_list = []
-    from services.title_parser import canonicalize_title
+    from services.local_scan_service import canonicalize_title
     
     for item in data:
         title = item.get('title')
         latest_chapter = item.get('latest_chapter')
+        needs_review = item.get('needs_review', False)
         if not title:
             return jsonify({"success": False, "error": "Title missing in one of the items"}), 400
         try:
@@ -400,7 +401,8 @@ def api_import_folder_summary():
         series_list.append({
             "title": title,
             "canonical": canonicalize_title(title),
-            "local_latest_chapter": latest_chapter
+            "local_latest_chapter": latest_chapter,
+            "needs_review": 1 if needs_review else 0
         })
         
     conn = get_connection()
@@ -409,10 +411,13 @@ def api_import_folder_summary():
         user_id = session['user_id']
         for s in series_list:
             cur.execute("""
-                INSERT INTO series (title, canonical)
-                VALUES (%s, %s)
-                ON DUPLICATE KEY UPDATE title = VALUES(title), updated_at = CURRENT_TIMESTAMP
-            """, (s['title'], s['canonical']))
+                INSERT INTO series (title, canonical, needs_review)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                    title = CASE WHEN VALUES(title) != 'Unknown Title' THEN VALUES(title) ELSE series.title END, 
+                    needs_review = CASE WHEN VALUES(needs_review) = 1 THEN 1 ELSE series.needs_review END,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (s['title'], s['canonical'], s['needs_review']))
             
             cur.execute("SELECT id FROM series WHERE canonical = %s", (s['canonical'],))
             row = cur.fetchone()
@@ -795,6 +800,51 @@ def api_debug_update_status():
         "items": rows
     })
 
+@app.route('/api/cleanup-generic-titles', methods=['POST'])
+@login_required
+def api_cleanup_generic_titles():
+    conn = get_connection()
+    if not conn:
+        return jsonify({"success": False, "error": "Database connection failed"}), 500
+        
+    try:
+        cur = conn.cursor()
+        
+        ignored_folders = [
+            "telegram desktop", "downloads", "screenshots", "images", 
+            "pictures", "desktop", "whatsapp images", "local", "uploads"
+        ]
+        
+        # Build the exact match and LIKE conditions for generic names
+        placeholders = ', '.join(['%s'] * len(ignored_folders))
+        params = ignored_folders.copy()
+        
+        # We also want to match canonical versions
+        ignored_canonical = [f.replace(' ', '') for f in ignored_folders]
+        placeholders_canon = ', '.join(['%s'] * len(ignored_canonical))
+        params.extend(ignored_canonical)
+        
+        # Update any series with exactly these titles or canonicals
+        query = f"""
+            UPDATE series
+            SET title = CONCAT('Unknown Title - ', title),
+                needs_review = 1
+            WHERE (LOWER(title) IN ({placeholders}) OR canonical IN ({placeholders_canon}))
+              AND title NOT LIKE 'Unknown Title - %'
+        """
+        
+        cur.execute(query, params)
+        affected = cur.rowcount
+        conn.commit()
+        
+        # Wait, what if someone named it 'telegramdesktop' canonical, maybe the exact match is enough.
+        
+        cur.close()
+        return jsonify({"success": True, "affected_rows": affected})
+    except Exception as e:
+        app.logger.exception("Cleanup error")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route('/api/search')
 @login_required
 def api_search():
@@ -952,3 +1002,4 @@ def api_library_add():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=Config.FLASK_DEBUG)
+# trigger reload

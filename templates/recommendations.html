@@ -95,6 +95,39 @@
 async function sendFeedback(canonical, action, btnElem) {
     const card = btnElem.closest('article');
     
+    // Store original state to revert if API fails
+    const origDisplay = card ? card.style.display : '';
+    const origOpacity = card ? card.style.opacity : '';
+    const origTransform = card ? card.style.transform : '';
+    const origBtnHtml = btnElem.innerHTML;
+    const origBtnClasses = btnElem.className;
+    const origCardClasses = card ? card.className : '';
+    
+    // Disable all buttons in this card temporarily
+    const allBtns = card ? card.querySelectorAll('button') : [];
+    allBtns.forEach(b => b.disabled = true);
+    
+    // OPTIMISTIC UI UPDATE
+    if (['disliked', 'already_read', 'ignored'].includes(action)) {
+        if (card) {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95)';
+            setTimeout(() => card.style.display = 'none', 300);
+        }
+    } else {
+        // For liked/saved, show visual feedback instantly
+        if (card) {
+            card.classList.add('ring-2', 'ring-primary-container', 'border-transparent');
+            btnElem.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Saved';
+            btnElem.classList.remove('bg-gray-50', 'bg-white', 'text-gray-600', 'text-gray-700', 'hover:bg-[#e0f2fe]', 'hover:text-[#0369a1]');
+            btnElem.classList.add('bg-primary-container', 'text-black', 'border-transparent');
+            
+            // If they clicked like, reset the dislike button if it was previously active (though we just disabled it)
+            // It's mutually exclusive.
+        }
+    }
+    
     try {
         const response = await fetch('/api/feedback', {
             method: 'POST',
@@ -112,25 +145,23 @@ async function sendFeedback(canonical, action, btnElem) {
             throw new Error(data.error || "Request failed");
         }
         
-        if (['disliked', 'already_read', 'ignored'].includes(action)) {
-            if (card) {
-                card.style.opacity = '0';
-                card.style.transform = 'scale(0.95)';
-                setTimeout(() => card.style.display = 'none', 300);
-            }
-        } else {
-            // For liked/saved, show visual feedback
-            if (card) {
-                card.classList.add('ring-2', 'ring-primary-container', 'border-transparent');
-                const origHtml = btnElem.innerHTML;
-                btnElem.innerHTML = '<span class="material-symbols-outlined text-sm">check</span> Saved';
-                btnElem.classList.remove('bg-gray-50', 'bg-white', 'text-gray-600', 'text-gray-700');
-                btnElem.classList.add('bg-primary-container', 'text-black', 'border-transparent');
-            }
-        }
+        // Success: just re-enable buttons that are still visible
+        allBtns.forEach(b => b.disabled = false);
+        
     } catch(e) {
         console.error("Feedback failed:", e);
-        alert("Failed: " + e.message);
+        // REVERT OPTIMISTIC UPDATE
+        if (card) {
+            card.style.display = origDisplay;
+            card.style.opacity = origOpacity;
+            card.style.transform = origTransform;
+            card.className = origCardClasses;
+        }
+        btnElem.innerHTML = origBtnHtml;
+        btnElem.className = origBtnClasses;
+        allBtns.forEach(b => b.disabled = false);
+        
+        alert("Failed to save feedback: " + e.message);
     }
 }
 

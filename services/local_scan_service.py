@@ -2,61 +2,51 @@ import re
 from pathlib import Path
 from db import get_connection
 from config import Config
-
 EXTS = {".pdf", ".cbz", ".cbr", ".zip", ".rar", ".epub", ".png", ".jpg", ".jpeg", ".webp"}
-
-LEADING_BRACKET_NUM = re.compile(r"^\s*\[\s*(\d+(?:\.\d+)?)\s*\]\s*(.*)$", re.I)
-EXPL_CH             = re.compile(r"(?:\bch(?:apter)?|\bep|\bchap)\s*(\d+(?:\.\d+)?)", re.I)
-TRAILING_BARE_NUM   = re.compile(r"(?:^|[ \-–_:._])(\d+(?:\.\d+)?)\s*$", re.I)
-TRAILING_TAGS       = re.compile(r"\s*[\(\[]\s*(?:eng|raw|hd|scan|color|clean|repack|v\d+|part\s*\d+)\s*[\)\]]\s*$", re.I)
-MULTISPACE          = re.compile(r"\s{2,}")
-
-_EXTS_RE = "(?:" + "|".join(re.escape(ext.lstrip(".")) for ext in sorted(EXTS, key=len, reverse=True)) + ")"
-CHANNEL_BETWEEN_ANY = re.compile(rf"@([A-Za-z0-9_ ]+)(?=\.{_EXTS_RE}\b)", re.I)
+IGNORED_FOLDERS = {"telegram desktop", "downloads", "screenshots", "images", "pictures", "desktop", "whatsapp images", "local", "uploads"}
+CHAPTER_FOLDER_REGEX = re.compile(r"^(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)$", re.I)
+MULTISPACE = re.compile(r"\s{2,}")
 
 def canonicalize_title(title: str) -> str:
     t = title.replace("-", " ").replace("–", " ").replace("_", " ")
     t = MULTISPACE.sub(" ", t)
     return t.strip().casefold()
 
-def extract_title_and_chapter(stem: str, filename=None):
-    s = stem.replace("_", " ").replace(".", " ").strip()
+def extract_title_and_chapter(nameWithoutExt: str):
+    chapterNum = None
+    title = None
     channel = None
-    if filename:
-        m = CHANNEL_BETWEEN_ANY.search(filename)
-        if m:
-            channel = m.group(1).strip()
-            variants = {channel, channel.replace("_", " ")}
-            for ch in variants:
-                s = re.sub(rf"\s*@{re.escape(ch)}\s*$", " ", s, flags=re.I)
-                s = re.sub(rf"\s*@{re.escape(ch)}\b",  " ", s, flags=re.I)
-
-    s = re.sub(r"\s*@[\w _-]+$", " ", s, flags=re.I)
-
-    chapter = None
-    m = LEADING_BRACKET_NUM.match(s)
-    if m:
-        try: chapter = float(m.group(1))
-        except ValueError: chapter = None
-        s = m.group(2)
-
-    if chapter is None:
-        m = EXPL_CH.search(s)
-        if m:
-            try: chapter = float(m.group(1))
-            except ValueError: chapter = None
-            s = EXPL_CH.sub("", s)
-
-    if chapter is None:
-        m = TRAILING_BARE_NUM.search(s)
-        if m:
-            try: chapter = float(m.group(1))
-            except ValueError: chapter = None
-            s = TRAILING_BARE_NUM.sub("", s)
-
-    s = TRAILING_TAGS.sub("", s)
-    s = MULTISPACE.sub(" ", s).strip(" -–_:")
-    return s or stem, chapter, channel
+    
+    # 1. Check for [170] Title @Channel pattern
+    bracketMatch = re.match(r"^\s*\[\s*(\d+(?:\.\d+)?)\s*\]\s*(.*)$", nameWithoutExt, re.I)
+    if bracketMatch:
+        chapterNum = float(bracketMatch.group(1))
+        possibleTitle = re.sub(r"\s*@.*$", "", bracketMatch.group(2)).strip()
+        if possibleTitle:
+            title = possibleTitle
+        
+        channelMatch = re.search(r"@([a-zA-Z0-9_\- ]+)$", bracketMatch.group(2))
+        if channelMatch:
+            channel = channelMatch.group(1).strip()
+            
+        return title, chapterNum, channel
+        
+    # 2. Check for other chapter patterns
+    m = re.search(r"(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)|(?:^|[ \-_])(\d+(?:\.\d+)?)(?:[ \-_]|$)", nameWithoutExt, re.I)
+    if m and not re.match(r"^(?:page|image|img|pic)\s*\d+", nameWithoutExt, re.I):
+        ch_str = m.group(1) or m.group(2)
+        if ch_str:
+            chapterNum = float(ch_str)
+            possibleTitle = nameWithoutExt.replace(m.group(0), "")
+            possibleTitle = re.sub(r"\s*@.*$", "", possibleTitle).strip(" -_")
+            if possibleTitle:
+                title = possibleTitle
+            
+            channelMatch = re.search(r"@([a-zA-Z0-9_\- ]+)$", nameWithoutExt)
+            if channelMatch:
+                channel = channelMatch.group(1).strip()
+                
+    return title, chapterNum, channel
 
 def scan_local_folder(folder=None):
     folder = folder or Config.MANHWA_FOLDER
@@ -74,46 +64,63 @@ def scan_local_folder(folder=None):
         if not p.is_file() or p.suffix.lower() not in EXTS:
             continue
 
-        # Use parent folder name if it's not the root folder, else fallback to stem
-        if p.parent != root:
-            # E.g. root/Solo Leveling/Chapter 01/page.jpg -> parent is Chapter 01
-            # If parent is Chapter 01, we want the manhwa title which might be "Solo Leveling"
-            # So we use the relative path parts
-            rel_parts = p.relative_to(root).parts
-            if len(rel_parts) >= 2:
-                # The first part of the relative path is the manhwa name, the second is chapter folder
-                title_candidate = f"{rel_parts[0]} {rel_parts[-2]}" 
-            else:
-                title_candidate = p.parent.name
-        else:
-            title_candidate = p.stem
-
-        # We also pass the actual filename for channel extraction
-        title, ch, channel = extract_title_and_chapter(title_candidate, filename=p.name)
+        fileName = p.name
+        fileExtMatch = re.match(r"^(.*?)\.[a-z0-9]+$", fileName, re.I)
+        nameWithoutExt = fileExtMatch.group(1) if fileExtMatch else fileName
+        
+        title, chapterNum, channel = extract_title_and_chapter(nameWithoutExt)
+        chapterFound = chapterNum is not None
+        
+        # 3. Fallback: look at folder names
+        parts = p.relative_to(root).parts
         if not title:
-            # Fallback to stem if parent parsing yielded nothing (unlikely)
-            title, ch_alt, channel_alt = extract_title_and_chapter(p.stem, filename=p.name)
-            if not title:
-                continue
-            if ch is None: ch = ch_alt
-            if channel is None: channel = channel_alt
+            for i in range(len(parts) - 2, -1, -1):
+                part = parts[i]
+                pLower = part.lower()
+                if pLower in IGNORED_FOLDERS or CHAPTER_FOLDER_REGEX.match(pLower):
+                    continue
+                title = part
+                break
+                
+        # Search folders for chapter if still not found
+        if not chapterFound:
+            for i in range(len(parts) - 1):
+                m = re.search(r"(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)", parts[i], re.I)
+                if m:
+                    ch_val = float(m.group(1))
+                    chapterNum = max(chapterNum or 0, ch_val)
+                    chapterFound = True
+
+        needs_review = False
+        if not title:
+            title = "Unknown Title"
+            needs_review = True
 
         canon = canonicalize_title(title)
-        display = canon_to_display.get(canon) or title
-        canon_to_display[canon] = display
+        
+        # If we have a non-unknown title with same canon, use its display name
+        if canon in canon_to_display and canon_to_display[canon] != "Unknown Title":
+            display = canon_to_display[canon]
+        else:
+            display = title
+            canon_to_display[canon] = display
 
-        prev_last, prev_channel, prev_mtime = (manhwa.get(display) or [0.0, None, None])
+        prev_last, prev_channel, prev_mtime, prev_review = (manhwa.get(display) or [0.0, None, None, False])
 
-        if ch is not None:
-            if ch > prev_last:
-                manhwa[display] = [ch, channel or prev_channel, p.stat().st_mtime]
-            elif ch == prev_last:
+        if chapterNum is not None:
+            if chapterNum > prev_last:
+                manhwa[display] = [chapterNum, channel or prev_channel, p.stat().st_mtime, needs_review and prev_review]
+            elif chapterNum == prev_last:
                 current_mtime = p.stat().st_mtime
                 if prev_mtime is None or current_mtime > prev_mtime:
-                    manhwa[display] = [prev_last, channel or prev_channel, current_mtime]
+                    manhwa[display] = [prev_last, channel or prev_channel, current_mtime, needs_review and prev_review]
         else:
             if display not in manhwa:
-                manhwa[display] = [prev_last, prev_channel, prev_mtime]
+                manhwa[display] = [prev_last, prev_channel, prev_mtime, needs_review]
+                
+        # Update review flag (if any file of a valid series has title, the series does not need review)
+        if not needs_review and manhwa.get(display):
+            manhwa[display][3] = False
 
     return manhwa
 
@@ -128,19 +135,21 @@ def update_series_from_local_files(user_id, folder=None):
     
     cur = conn.cursor()
     rows = []
-    for title, (last_local, local_channel, _) in local_data.items():
+    for title, (last_local, local_channel, _, needs_review) in local_data.items():
         canonical = canonicalize_title(title)
-        rows.append((title.strip(), canonical, float(last_local or 0.0), local_channel))
+        needs_rev_int = 1 if needs_review else 0
+        rows.append((title.strip(), canonical, float(last_local or 0.0), local_channel, needs_rev_int))
 
     if rows:
         # 1. Update global series table
         cur.executemany("""
-            INSERT INTO series (title, canonical, channel)
-            VALUES (%s, %s, %s)
+            INSERT INTO series (title, canonical, channel, needs_review)
+            VALUES (%s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 channel = COALESCE(VALUES(channel), series.channel),
+                needs_review = CASE WHEN VALUES(needs_review) = 1 THEN 1 ELSE series.needs_review END,
                 updated_at = CURRENT_TIMESTAMP;
-        """, [(r[0], r[1], r[3]) for r in rows])
+        """, [(r[0], r[1], r[3], r[4]) for r in rows])
         conn.commit()
         
         # 2. Update user_series

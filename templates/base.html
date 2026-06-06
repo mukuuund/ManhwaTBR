@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MANGA_TRACK</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2">
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
+        tailwind = {
+            config: {
+                darkMode: 'class',
+                theme: {
                 extend: {
                     colors: {
                         background: 'var(--color-bg-main)',
@@ -50,7 +47,12 @@
                 }
             }
         }
+    }
     </script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;700;800&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2">
     <style>
         .auth-bg {
             background-image: url("{{ url_for('static', filename='images/login-bg.png') }}?v=2");

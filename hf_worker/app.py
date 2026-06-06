@@ -147,7 +147,7 @@ def get_user_feedback_summary(user_id):
     conn = get_connection()
     if not conn: return {}
     cur = conn.cursor(dictionary=True)
-    cur.execute("SELECT canonical, feedback_type FROM user_feedback WHERE user_id = %s", (user_id,))
+    cur.execute("SELECT manhwa_canonical AS canonical, feedback_type FROM user_feedback WHERE user_id = %s", (user_id,))
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -163,6 +163,7 @@ def get_user_feedback_summary(user_id):
 
 @app.post("/generate")
 def generate_recommendations(req: GenerateRequest, authorized: bool = Depends(verify_secret)):
+    print(f"HF /generate started for user_id {req.user_id}")
     user_id = req.user_id
     conn = get_connection()
     if not conn:
@@ -180,6 +181,7 @@ def generate_recommendations(req: GenerateRequest, authorized: bool = Depends(ve
         LEFT JOIN manhwa_meta m ON LOWER(m.display) = LOWER(s.title)
         WHERE us.user_id = %s
     """, conn, params=(user_id,))
+    print(f"library rows loaded: {len(library_df)}")
     
     trending_df = pd.read_sql("""
         SELECT canonical, display as title, description, genres, 
@@ -187,6 +189,7 @@ def generate_recommendations(req: GenerateRequest, authorized: bool = Depends(ve
                updated_at, source, source_id
         FROM trending_manhwa
     """, conn)
+    print(f"trending rows loaded: {len(trending_df)}")
     
     if len(library_df) == 0:
         conn.close()
@@ -195,10 +198,13 @@ def generate_recommendations(req: GenerateRequest, authorized: bool = Depends(ve
         conn.close()
         return {"success": False, "error": "Trending candidates empty."}
         
-    feedback_summary = get_user_feedback_summary(user_id)
+    feedback_summary = get_user_feedback_summary(user_id) or {}
+    feedback_rows_count = sum(len(v) for v in feedback_summary.values() if isinstance(v, list))
+    print(f"feedback rows loaded: {feedback_rows_count}")
+    
     already_read = set(library_df['canonical'].tolist())
-    already_read.update(feedback_summary.get('already_read', []))
-    disliked_titles = set(feedback_summary.get('disliked', []))
+    already_read.update(feedback_summary.get('already_read') or [])
+    disliked_titles = set(feedback_summary.get('disliked') or [])
     
     trending_df = trending_df[~trending_df['canonical'].isin(already_read)].reset_index(drop=True)
     if len(trending_df) == 0:
@@ -307,6 +313,8 @@ def generate_recommendations(req: GenerateRequest, authorized: bool = Depends(ve
     conn.commit()
     cur.close()
     conn.close()
+    
+    print(f"recommendation rows saved: {len(insert_rows)}")
     
     return {"success": True, "message": f"Generated {len(insert_rows)} recommendations", "count": len(insert_rows)}
 

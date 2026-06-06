@@ -160,51 +160,110 @@ async function handleUpload(e) {
     const files = e.target.files;
     if (files.length === 0) return;
     
-    // Check if flat files were selected but user might need folder mode
-    if (e.target.id === 'filesInput' && files.length > 0) {
-        // Just a quick check if they uploaded flat files but maybe they should have used folders
-        // We'll let the server parse them, but server relies on folders for title inference if filenames are just "page1.jpg"
-    }
-    
     const statusDiv = document.getElementById('importStatus');
     const msgP = document.getElementById('importMsg');
     const warnDiv = document.getElementById('importWarnings');
     
     statusDiv.classList.remove('hidden');
-    msgP.innerText = `Uploading and processing ${files.length} files... This might take a moment.`;
+    msgP.innerText = `Scanning ${files.length} files locally...`;
     warnDiv.innerHTML = '';
     
-    const formData = new FormData();
+    const isFolderInput = e.target.id === 'folderInput';
+    
+    // Process files into a summary
+    const seriesMap = new Map();
+    const chapterRegex = /(?:chapter|ch|episode|ep)[ \-_]*(\d+(?:\.\d+)?)/i;
+    
     for (let i = 0; i < files.length; i++) {
-        // webkitRelativePath contains the directory structure
-        const path = files[i].webkitRelativePath || files[i].name;
-        // Append with the path as filename so server gets the folder structure!
-        formData.append('files', files[i], path);
+        const file = files[i];
+        const path = file.webkitRelativePath || file.name;
+        const parts = path.split('/');
+        
+        let title = parts[0];
+        if (parts.length < 2 && isFolderInput) {
+            // Probably just a single folder selected or flat files
+            title = "Unknown Series";
+        } else if (!isFolderInput) {
+             title = "Unknown Series (Files Only)";
+        }
+        
+        // Remove trailing slash/extensions if they somehow got in title
+        title = title.trim();
+        
+        // Infer chapter from the path components
+        let chapterNum = 0;
+        let chapterFound = false;
+        
+        // Search through parts (like "Chapter 120")
+        for (let j = 0; j < parts.length; j++) {
+            const m = parts[j].match(chapterRegex);
+            if (m && m[1]) {
+                chapterNum = Math.max(chapterNum, parseFloat(m[1]));
+                chapterFound = true;
+            }
+        }
+        
+        // If not found in parts, check if the file name itself has a number
+        if (!chapterFound) {
+            const fileName = parts[parts.length - 1];
+            // Only use filename if it's not just "page1.jpg"
+            if (!fileName.match(/^(?:page|image|img|pic)\s*\d+/i)) {
+                const m = fileName.match(/(\d+(?:\.\d+)?)/);
+                if (m && m[1]) {
+                    chapterNum = Math.max(chapterNum, parseFloat(m[1]));
+                }
+            }
+        }
+        
+        if (!seriesMap.has(title)) {
+            seriesMap.set(title, {
+                title: title,
+                latest_chapter: chapterNum,
+                file_count: 1,
+                sample_path: path
+            });
+        } else {
+            const existing = seriesMap.get(title);
+            existing.latest_chapter = Math.max(existing.latest_chapter, chapterNum);
+            existing.file_count++;
+        }
     }
     
+    const summaryList = Array.from(seriesMap.values());
+    if (summaryList.length === 0) {
+        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Could not detect any valid manhwa folders.`;
+        e.target.value = '';
+        return;
+    }
+    
+    // Check if we couldn't infer titles properly
+    if (summaryList.length === 1 && summaryList[0].title.startsWith("Unknown Series")) {
+        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Could not detect title. Please select the parent manhwa folder.`;
+        e.target.value = '';
+        return;
+    }
+
+    msgP.innerText = `Importing progress... sending metadata for ${summaryList.length} manhwa.`;
+    
     try {
-        const res = await fetch('/api/import-upload', {
+        const res = await fetch('/api/import-folder-summary', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(summaryList)
         });
+        
         const data = await res.json();
         
-        if (!res.ok) {
-            throw new Error(data.message || "Upload failed");
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || data.message || "Import failed");
         }
         
-        msgP.innerHTML = `<span class="text-green-600 font-bold">Success!</span> Processed ${data.files_processed} files. Found ${data.imported_series_count} series updates.`;
-        if (data.warnings && data.warnings.length > 0) {
-            warnDiv.innerHTML = '<strong>Warnings:</strong><br>' + data.warnings.slice(0, 5).join('<br>') + (data.warnings.length > 5 ? '<br>...' : '');
-        }
-        
+        msgP.innerHTML = `<span class="text-green-600 font-bold">Success!</span> ${data.message}`;
         setTimeout(() => window.location.reload(), 2000);
     } catch (err) {
-        if (err.message.includes("No valid files") && e.target.id === 'filesInput') {
-             msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> Please upload a folder so we can detect manhwa names correctly.`;
-        } else {
-             msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> ${err.message}`;
-        }
+        msgP.innerHTML = `<span class="text-red-600 font-bold">Error:</span> ${err.message}`;
     }
     
     // Clear input

@@ -19,12 +19,10 @@
                 <span class="material-symbols-outlined text-lg">sync</span>
                 Refresh Trends
             </button>
-            <form action="{{ url_for('run_recommendations') }}" method="POST">
-                <button type="submit" class="bg-primary-container text-black px-4 py-2 text-sm font-bold shadow-md shadow-primary-container/20 rounded-sm flex items-center gap-2 hover:bg-[#aee600] transition-colors">
-                    <span class="material-symbols-outlined text-lg">auto_awesome</span>
-                    Generate New
-                </button>
-            </form>
+            <button id="generateRecommendationsBtn" class="bg-primary-container text-black px-4 py-2 text-sm font-bold shadow-md shadow-primary-container/20 rounded-sm flex items-center gap-2 hover:bg-[#aee600] transition-colors">
+                <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                Generate New
+            </button>
         </div>
     </div>
 
@@ -166,6 +164,46 @@ document.getElementById('refreshTrendingBtn').addEventListener('click', async (e
         alert(`Successfully fetched ${data.inserted_or_updated} candidates.`);
     } catch (e) {
         alert("Error refreshing candidates: " + e.message);
+    }
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+});
+
+document.getElementById('generateRecommendationsBtn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">auto_awesome</span> Generating...';
+    btn.disabled = true;
+    try {
+        // Fetch with an AbortController for timeout (e.g. 3 minutes)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 180000);
+        
+        const res = await fetch('/recommendations/generate', {
+            method: 'POST',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        // Our endpoint returns a redirect if it was standard, but if we change it to return JSON:
+        // Wait, app.py currently has it doing `return redirect(url_for('recommendations'))` if it's the old endpoint.
+        // Let's expect JSON if we changed it, or if it redirects we just reload.
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await res.json();
+            if (!res.ok || data.status === "error") throw new Error(data.message || data.error || "Generation failed");
+            alert(data.message || "Recommendations generated!");
+            window.location.reload();
+        } else {
+            // It was a redirect or HTML, just reload
+            window.location.reload();
+        }
+    } catch (e) {
+        if (e.name === 'AbortError') {
+            alert("Error: Request timed out. The ML worker might be taking too long.");
+        } else {
+            alert("Error generating recommendations: " + e.message);
+        }
     }
     btn.innerHTML = originalHtml;
     btn.disabled = false;

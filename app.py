@@ -344,13 +344,9 @@ def recommendations():
 def run_recommendations():
     try:
         res = generate_recommendations(session['user_id'])
-        if res.get('status') == 'success':
-            flash(res['message'], 'success')
-        else:
-            flash(res.get('message', 'Failed to generate recommendations.'), 'error')
+        return jsonify(res)
     except Exception as e:
-        flash(f"Error generating recommendations: {str(e)}.", 'error')
-    return redirect(url_for('recommendations'))
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/scan/local', methods=['POST'])
 @login_required
@@ -379,19 +375,39 @@ def scan_telegram():
         flash(f"Error during Telegram scan: {str(e)}", 'error')
     return redirect(url_for('library'))
 
-@app.route('/api/import-folder', methods=['POST'])
+@app.route('/api/import-folder-summary', methods=['POST'])
 @login_required
-def api_import_folder():
+def api_import_folder_summary():
     data = request.json
-    files = data.get('files', [])
-    series_list, files_processed, warnings = group_imported_files(files)
+    if not isinstance(data, list):
+        return jsonify({"success": False, "error": "Expected a JSON array of items"}), 400
+        
+    series_list = []
+    from services.title_parser import canonicalize_title
     
+    for item in data:
+        title = item.get('title')
+        latest_chapter = item.get('latest_chapter')
+        if not title:
+            return jsonify({"success": False, "error": "Title missing in one of the items"}), 400
+        try:
+            latest_chapter = float(latest_chapter) if latest_chapter is not None else 0.0
+            if latest_chapter < 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": f"Invalid chapter number for {title}"}), 400
+            
+        series_list.append({
+            "title": title,
+            "canonical": canonicalize_title(title),
+            "local_latest_chapter": latest_chapter
+        })
+        
     conn = get_connection()
     if conn:
         cur = conn.cursor()
         user_id = session['user_id']
         for s in series_list:
-            # 1. Insert into global series
             cur.execute("""
                 INSERT INTO series (title, canonical)
                 VALUES (%s, %s)
@@ -399,26 +415,25 @@ def api_import_folder():
             """, (s['title'], s['canonical']))
             
             cur.execute("SELECT id FROM series WHERE canonical = %s", (s['canonical'],))
-            series_id = cur.fetchone()[0]
-            
-            # 2. Insert into user_series
-            cur.execute("""
-                INSERT INTO user_series (user_id, series_id, local_latest_chapter)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    local_latest_chapter = GREATEST(COALESCE(VALUES(local_latest_chapter), 0), COALESCE(user_series.local_latest_chapter, 0)),
-                    updated_at = CURRENT_TIMESTAMP
-            """, (user_id, series_id, s['local_latest_chapter']))
-            
+            row = cur.fetchone()
+            if row:
+                series_id = row[0]
+                cur.execute("""
+                    INSERT INTO user_series (user_id, series_id, local_latest_chapter)
+                    VALUES (%s, %s, %s)
+                    ON DUPLICATE KEY UPDATE
+                        local_latest_chapter = GREATEST(COALESCE(VALUES(local_latest_chapter), 0), COALESCE(user_series.local_latest_chapter, 0)),
+                        updated_at = CURRENT_TIMESTAMP
+                """, (user_id, series_id, s['local_latest_chapter']))
+                
         conn.commit()
         cur.close()
         conn.close()
         
     return jsonify({
-        "imported_series_count": len(series_list),
-        "files_processed": files_processed,
-        "series": series_list,
-        "warnings": warnings
+        "success": True,
+        "imported_count": len(series_list),
+        "message": f"Imported {len(series_list)} manhwa"
     })
 
 @app.route('/api/refresh-remote-chapters', methods=['POST'])

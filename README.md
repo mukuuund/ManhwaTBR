@@ -8,9 +8,9 @@ ManhwaTBR allows users to upload/select their local manhwa folder, automatically
 
 ## Live Demo
 
-* **Web App:** Add Render link here
-* **ML Worker:** Add Hugging Face Space link here
-* **Repository:** Add GitHub repo link here
+* **Web App:** [Add Render link here](https://manhwatbr.onrender.com)
+* **ML Worker:** [Add Hugging Face Space link her](https://huggingface.co/spaces/mukund222/manhwatbr-ml-worker)
+* **Repository:** [Add GitHub repo link here](https://github.com/mukuuund/ManhwaTBR)
 
 ---
 
